@@ -5,586 +5,461 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Job Application Tracker</title>
     <style>
-        /* ... (Tuo CSS invariato, lo trovi qui sopra! Incolla qui se vuoi mantenere la formattazione attuale) ... */
-        /* Puoi copiarlo dal tuo esempio precedente */
-        /* Sotto lasciato vuoto per brevità, ma va copiato! */
+        /* Puoi personalizzare questo CSS */
+        body { background: #ededed; font-family: 'Segoe UI', Arial, Helvetica, sans-serif; margin:0; padding:0; }
+        .container { max-width:1200px; margin:30px auto; background:#fff; border-radius:12px; box-shadow:0 5px 25px #0001; padding:30px;}
+        .header { text-align:center; background: linear-gradient(120deg, #3d9bc8 60%, #b288c0); color:white; border-radius:12px 12px 0 0; padding:20px 10px 30px 10px;}
+        h1 { margin-bottom:10px; }
+        .controls, .stats, .content { margin-top:1em;}
+        .controls-row { display:flex; flex-wrap:wrap; gap:20px;}
+        .form-group { min-width:200px; flex:1;}
+        label{font-weight:600;}
+        input, select {padding:10px; border:1px solid #d9dbdd; border-radius:5px; width:100%;}
+        .btn { background-color:#3d9bc8; color:#fff; border:none; border-radius:4px; padding:10px 22px; cursor:pointer; margin-top:0.5em;}
+        .btn-success {background:#35af74;}
+        .btn:hover,.btn-success:hover { opacity:0.85;}
+        .applications-table { width:100%; border-collapse:collapse;}
+        .applications-table th, .applications-table td{padding:10px 8px; border-bottom:1px solid #eee;}
+        .applications-table th { background:#f7f7fb;}
+        .phase-header {font-weight:bold; font-size:1.1em; background:#3d9bc8; color:#fff; padding:8px 14px; border-radius:8px 8px 0 0;}
+        .phase-section { background:#fafbfc; margin-bottom:22px; border-radius:8px; box-shadow:0 2px 5px #0001;}
+        .stats {display:flex; flex-wrap:wrap;gap:20px;}
+        .stat-card { background:#e9f4fa; color:#2181a5; border-radius:8px; padding:17px 30px; flex:1 1 140px;min-width:140px; text-align:center;}
+        .stat-number { font-weight:bold; font-size:1.9em;}
+        .import-info {background:#f1eafe;border-left:4px solid #3d9bc8;padding:13px 22px;border-radius:6px; margin-top:10px;font-size:0.98em;}
+        #importPreview {margin:18px 0;}
+        .no-applications { text-align:center; padding:36px; color:#8b97a0; }
+        @media (max-width: 900px) { .controls-row,.stats { flex-direction:column; } }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🎯 Job Application Tracker</h1>
-            <p>Monitora le tue candidature e gestisci il processo di selezione</p>
-        </div>
-
-        <div class="controls">
-            <div class="controls-row">
-                <div class="form-group">
-                    <label for="companyInput">Azienda:</label>
-                    <input type="text" id="companyInput" placeholder="Nome azienda">
-                </div>
-                <div class="form-group">
-                    <label for="roleInput">Ruolo:</label>
-                    <input type="text" id="roleInput" placeholder="Titolo del ruolo">
-                </div>
-                <div class="form-group">
-                    <label for="jobSpecInput">Job spec:</label>
-                    <input type="text" id="jobSpecInput" placeholder="Job spec (opzionale)">
-                </div>
-                <div class="form-group">
-                    <label for="statusInput">Fase:</label>
-                    <select id="statusInput">
-                        <option value="applied">Applied</option>
-                        <option value="hr">HR Interview</option>
-                        <option value="2round">2° Round</option>
-                        <option value="3round">3° Round</option>
-                        <option value="4round">4° Round</option>
-                        <option value="5round">5° Round</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="dateInput">Data Candidatura:</label>
-                    <input type="date" id="dateInput">
-                </div>
-                <div class="form-group">
-                    <label for="commentsInput">Commenti:</label>
-                    <input type="text" id="commentsInput" placeholder="Note o commenti (opzionale)">
-                </div>
+<div class="container">
+    <div class="header">
+        <h1>🎯 Job Application Tracker</h1>
+        <p>Monitora le tue candidature, importa file Excel, visualizza per fase.</p>
+    </div>
+    <div class="controls">
+        <div class="controls-row">
+            <div class="form-group">
+                <label for="companyInput">Azienda:</label>
+                <input type="text" id="companyInput" placeholder="Nome azienda">
             </div>
-            <div class="controls-row">
-                <button class="btn btn-success" onclick="addApplication()">➕ Aggiungi Candidatura</button>
-                <div class="form-group">
-                    <label for="csvFile">Importa da CSV/Excel:</label>
-                    <input type="file" id="csvFile" accept=".csv,.xlsx,.xls" onchange="importFile(this)" class="file-input">
-                </div>
-                <button class="btn" onclick="exportToCSV()" style="background: linear-gradient(135deg, #f39c12, #e67e22);">📄 Esporta CSV</button>
-                <button class="btn" onclick="exportToExcel()" style="background: linear-gradient(135deg, #27ae60, #2ecc71);">📊 Esporta Excel</button>
-                <button class="btn" onclick="clearAllData()" style="background: linear-gradient(135deg, #e74c3c, #c0392b);">🗑️ Cancella Tutto</button>
-                <div class="form-group">
-                    <label for="filterCompany">Filtra per Azienda:</label>
-                    <input type="text" id="filterCompany" placeholder="Cerca azienda..." oninput="filterApplications()">
-                </div>
-                <div class="form-group">
-                    <label for="filterRole">Filtra per Ruolo:</label>
-                    <input type="text" id="filterRole" placeholder="Cerca ruolo..." oninput="filterApplications()">
-                </div>
-                <div class="form-group">
-                    <label for="filterStatus">Filtra per Fase:</label>
-                    <select id="filterStatus" onchange="filterApplications()">
-                        <option value="">Tutte le fasi</option>
-                        <option value="applied">Applied</option>
-                        <option value="hr">HR Interview</option>
-                        <option value="2round">2° Round</option>
-                        <option value="3round">3° Round</option>
-                        <option value="4round">4° Round</option>
-                        <option value="5round">5° Round</option>
-                    </select>
-                </div>
+            <div class="form-group">
+                <label for="roleInput">Ruolo:</label>
+                <input type="text" id="roleInput" placeholder="Titolo del ruolo">
             </div>
-            
-            <div class="import-info">
-                <h4>📋 Formato File Supportato:</h4>
-                <ul>
-                    <li><strong>CSV:</strong> Separato da virgole o punto e virgola</li>
-                    <li><strong>Excel:</strong> File .xlsx o .xls</li>
-                </ul>
-                <p><strong>Struttura colonne usabili (intestazioni accettate):</strong></p>
-                <ul>
-                    <li><strong>Company</strong> (obbligatorio),</li>
-                    <li><strong>Role</strong> (obbligatorio),</li>
-                    <li><strong>Job spec</strong> (facoltativo),</li>
-                    <li><strong>Application</strong> (obbligatorio, data candidatura),</li>
-                    <li><strong>Application Status</strong> (obbligatorio),</li>
-                    <li><strong>comments</strong> (facoltativo)</li>
-                </ul>
-                <p><strong>Nota:</strong> La prima riga deve contenere le intestazioni</p>
+            <div class="form-group">
+                <label for="jobSpecInput">Job spec:</label>
+                <input type="text" id="jobSpecInput" placeholder="Job spec (opzionale)">
             </div>
-            
-            <div class="stats">
-                <div class="stat-card">
-                    <div class="stat-number" id="totalApplications">0</div>
-                    <div class="stat-label">Candidature Totali</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="appliedCount">0</div>
-                    <div class="stat-label">In Attesa</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="interviewCount">0</div>
-                    <div class="stat-label">In Processo</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="advancedCount">0</div>
-                    <div class="stat-label">Fasi Avanzate</div>
-                </div>
+            <div class="form-group">
+                <label for="statusInput">Fase:</label>
+                <select id="statusInput">
+                    <option value="applied">Applied</option>
+                    <option value="hr">HR Interview</option>
+                    <option value="2round">2° Round</option>
+                    <option value="3round">3° Round</option>
+                    <option value="4round">4° Round</option>
+                    <option value="5round">5° Round</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="dateInput">Data Candidatura:</label>
+                <input type="date" id="dateInput">
+            </div>
+            <div class="form-group">
+                <label for="commentsInput">Commenti:</label>
+                <input type="text" id="commentsInput" placeholder="Note o commenti (opzionale)">
             </div>
         </div>
-
-        <div class="content" id="applicationsList">
-            <!-- Le candidature verranno inserite qui dinamicamente -->
+        <div class="controls-row">
+            <button class="btn btn-success" onclick="addApplication()">➕ Aggiungi Candidatura</button>
+            <div class="form-group">
+                <label for="csvFile">Importa da CSV/Excel:</label>
+                <input type="file" id="csvFile" accept=".csv,.xlsx,.xls" onchange="previewImportFile(this)" class="file-input">
+            </div>
+            <button class="btn" onclick="exportToCSV()" style="background: linear-gradient(135deg, #f39c12, #e67e22);">📄 Esporta CSV</button>
+            <button class="btn" onclick="exportToExcel()" style="background: linear-gradient(135deg, #27ae60, #2ecc71);">📊 Esporta Excel</button>
+            <button class="btn" onclick="clearAllData()" style="background: linear-gradient(135deg, #e74c3c, #c0392b);">🗑️ Cancella Tutto</button>
+            <div class="form-group">
+                <label for="filterCompany">Filtra per Azienda:</label>
+                <input type="text" id="filterCompany" placeholder="Cerca azienda..." oninput="filterApplications()">
+            </div>
+            <div class="form-group">
+                <label for="filterRole">Filtra per Ruolo:</label>
+                <input type="text" id="filterRole" placeholder="Cerca ruolo..." oninput="filterApplications()">
+            </div>
+            <div class="form-group">
+                <label for="filterStatus">Filtra per Fase:</label>
+                <select id="filterStatus" onchange="filterApplications()">
+                    <option value="">Tutte le fasi</option>
+                    <option value="applied">Applied</option>
+                    <option value="hr">HR Interview</option>
+                    <option value="2round">2° Round</option>
+                    <option value="3round">3° Round</option>
+                    <option value="4round">4° Round</option>
+                    <option value="5round">5° Round</option>
+                </select>
+            </div>
+        </div>
+        <div class="import-info">
+            <h4>📋 Formato File aspettato:</h4>
+            <ul>
+            <li>Colonne: <b>Company</b>, <b>Role</b>, <b>Job spec</b>, <b>Application</b>, <b>data</b>, <b>company description</b>, <b>Application Status</b>, <b>comments</b></li>
+            <li>Basta anche un sottoinsieme, ma  <b>Company, Role, Application/Application Status</b> servono</li>
+            <li>Seleziona il file, controlla l'anteprima e poi clicca "✅ Conferma Import"</li>
+            </ul>
+        </div>
+        <div id="importPreview"></div>
+        <button class="btn btn-success" id="confirmImportBtn" style="display:none;" onclick="confirmImportData()">✅ Conferma Import</button>
+    </div>
+    <div class="stats">
+        <div class="stat-card">
+            <div class="stat-number" id="totalApplications">0</div>
+            <div class="stat-label">Candidature Totali</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="appliedCount">0</div>
+            <div class="stat-label">In Attesa</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="interviewCount">0</div>
+            <div class="stat-label">In Processo</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="advancedCount">0</div>
+            <div class="stat-label">Fasi Avanzate</div>
         </div>
     </div>
+    <div class="content" id="applicationsList">
+        <!-- Lista -->
+    </div>
+</div>
+<!-- Librerie per Excel e CSV -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script>
+// -----------------------------
+// State + costanti
+let applications = [
+    {id:1, company:"Google", role:"Software Engineer", jobSpec:"", status:"applied", dateApplied:"2024-01-15", comments:""},
+    {id:2, company:"Microsoft", role:"Product Manager", jobSpec:"", status:"hr", dateApplied:"2024-01-10", comments:""},
+    {id:3, company:"Amazon", role:"Data Scientist", jobSpec:"", status:"2round", dateApplied:"2024-01-05", comments:""}
+];
+let nextId = 4;
+const statusLabels = {
+    applied: "Applied",
+    hr: "HR Interview",
+    "2round": "2° Round",
+    "3round": "3° Round",
+    "4round": "4° Round",
+    "5round": "5° Round"
+};
+const statusOrder = ['applied', 'hr', '2round', '3round', '4round', '5round'];
+// -------------------------------
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-    <script>
-        // Dati delle candidature (in memoria)
-        let applications = [
-            {
-                id: 1,
-                company: "Google",
-                role: "Software Engineer",
-                jobSpec: "",
-                status: "applied",
-                dateApplied: "2024-01-15",
-                comments: ""
-            },
-            {
-                id: 2,
-                company: "Microsoft",
-                role: "Product Manager",
-                jobSpec: "",
-                status: "hr",
-                dateApplied: "2024-01-10",
-                comments: ""
-            },
-            {
-                id: 3,
-                company: "Amazon",
-                role: "Data Scientist",
-                jobSpec: "",
-                status: "2round",
-                dateApplied: "2024-01-05",
-                comments: ""
-            }
-        ];
+function addApplication() {
+    const company = document.getElementById('companyInput').value.trim();
+    const role = document.getElementById('roleInput').value.trim();
+    const jobSpec = document.getElementById('jobSpecInput').value.trim();
+    const status = document.getElementById('statusInput').value;
+    const dateApplied = document.getElementById('dateInput').value;
+    const comments = document.getElementById('commentsInput').value.trim();
+    if (!company || !role || !dateApplied) {
+        alert('Compila tutti i campi obbligatori');
+        return;
+    }
+    applications.push({id: nextId++, company, role, jobSpec, status, dateApplied, comments});
+    document.getElementById('companyInput').value = '';
+    document.getElementById('roleInput').value = '';
+    document.getElementById('jobSpecInput').value = '';
+    document.getElementById('dateInput').value = '';
+    document.getElementById('commentsInput').value = '';
+    renderApplications();
+    updateStats();
+}
 
-        let nextId = 4;
-
-        const statusLabels = {
-            applied: "Applied",
-            hr: "HR Interview",
-            "2round": "2° Round",
-            "3round": "3° Round",
-            "4round": "4° Round",
-            "5round": "5° Round"
-        };
-
-        const statusOrder = ['applied', 'hr', '2round', '3round', '4round', '5round'];
-
-        function addApplication() {
-            const company = document.getElementById('companyInput').value.trim();
-            const role = document.getElementById('roleInput').value.trim();
-            const jobSpec = document.getElementById('jobSpecInput').value.trim();
-            const status = document.getElementById('statusInput').value;
-            const dateApplied = document.getElementById('dateInput').value;
-            const comments = document.getElementById('commentsInput').value.trim();
-
-            if (!company || !role || !dateApplied) {
-                alert('Compila tutti i campi obbligatori');
-                return;
-            }
-
-            const newApplication = {
-                id: nextId++,
-                company,
-                role,
-                jobSpec,
-                status,
-                dateApplied,
-                comments
-            };
-
-            applications.push(newApplication);
-
-            // Pulisci i campi
-            document.getElementById('companyInput').value = '';
-            document.getElementById('roleInput').value = '';
-            document.getElementById('jobSpecInput').value = '';
-            document.getElementById('dateInput').value = '';
-            document.getElementById('commentsInput').value = '';
-
-            renderApplications();
-            updateStats();
-        }
-
-        function updateApplicationStatus(id, newStatus) {
-            const application = applications.find(app => app.id === id);
-            if (application) {
-                application.status = newStatus;
-                renderApplications();
-                updateStats();
-            }
-        }
-
-        function deleteApplication(id) {
-            if (confirm('Sei sicuro di voler eliminare questa candidatura?')) {
-                applications = applications.filter(app => app.id !== id);
-                renderApplications();
-                updateStats();
-            }
-        }
-
-        function filterApplications() {
-            const companyFilter = document.getElementById('filterCompany').value.toLowerCase();
-            const roleFilter = document.getElementById('filterRole').value.toLowerCase();
-            const statusFilter = document.getElementById('filterStatus').value;
-
-            const filtered = applications.filter(app => {
-                const matchesCompany = !companyFilter || app.company.toLowerCase().includes(companyFilter);
-                const matchesRole = !roleFilter || app.role.toLowerCase().includes(roleFilter);
-                const matchesStatus = !statusFilter || app.status === statusFilter;
-
-                return matchesCompany && matchesRole && matchesStatus;
-            });
-
-            renderApplications(filtered);
-        }
-
-        function renderApplications(appsToRender = applications) {
-            const container = document.getElementById('applicationsList');
-            container.innerHTML = '';
-
-            if (appsToRender.length === 0) {
-                container.innerHTML = '<div class="no-applications">Nessuna candidatura trovata</div>';
-                return;
-            }
-
-            // Raggruppa per stato
-            const groupedByStatus = {};
-            statusOrder.forEach(status => {
-                groupedByStatus[status] = appsToRender.filter(app => app.status === status);
-            });
-
-            // Renderizza ogni gruppo
-            statusOrder.forEach(status => {
-                const apps = groupedByStatus[status];
-                if (apps.length > 0) {
-                    const section = document.createElement('div');
-                    section.className = 'phase-section fade-in';
-
-                    section.innerHTML = `
-                        <div class="phase-header phase-${status}">
-                            <span>${statusLabels[status]}</span>
-                            <span class="phase-count">${apps.length}</span>
-                        </div>
-                        <table class="applications-table">
-                            <thead>
-                                <tr>
-                                    <th>Azienda</th>
-                                    <th>Ruolo</th>
-                                    <th>Job spec</th>
-                                    <th>Data Candidatura</th>
-                                    <th>Stato</th>
-                                    <th>Commenti</th>
-                                    <th>Azioni</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${apps.map(app => `
-                                    <tr class="slide-up">
-                                        <td class="company-name">${app.company}</td>
-                                        <td class="role-title">${app.role}</td>
-                                        <td>${app.jobSpec || ''}</td>
-                                        <td class="date-applied">${formatDate(app.dateApplied)}</td>
-                                        <td>
-                                            <select class="status-select" onchange="updateApplicationStatus(${app.id}, this.value)">
-                                                ${statusOrder.map(s => `
-                                                    <option value="${s}" ${s === app.status ? 'selected' : ''}>${statusLabels[s]}</option>
-                                                `).join('')}
-                                            </select>
-                                        </td>
-                                        <td>${app.comments || ''}</td>
-                                        <td>
-                                            <button class="btn" onclick="deleteApplication(${app.id})" style="background: #e74c3c; font-size: 12px; padding: 6px 12px;">🗑️</button>
-                                        </td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    `;
-
-                    container.appendChild(section);
-                }
-            });
-        }
-
-        function importFile(input) {
-            const file = input.files[0];
-            if (!file) return;
-
-            const fileExtension = file.name.split('.').pop().toLowerCase();
-
-            if (fileExtension === 'csv') {
-                importCSV(file);
-            } else if (fileExtension === 'xlsx' || fileExtension === 'xls') {
-                importExcel(file);
-            } else {
-                alert('❌ Formato file non supportato. Usa CSV, XLSX o XLS');
-            }
-        }
-
-        function importCSV(file) {
-            Papa.parse(file, {
-                header: true,
-                skipEmptyLines: true,
-                dynamicTyping: true,
-                delimitersToGuess: [',', ';', '\t'],
-                complete: function(results) {
-                    if (results.errors.length > 0) {
-                        console.warn('Errori nel parsing CSV:', results.errors);
-                    }
-
-                    const data = results.data;
-                    if (data.length === 0) {
-                        alert('❌ Il file CSV è vuoto o non ha il formato corretto');
-                        return;
-                    }
-
-                    processImportedData(data, 'CSV');
-                },
-                error: function(error) {
-                    console.error('Errore durante il parsing CSV:', error);
-                    alert('❌ Errore durante l\'import del file CSV. Controlla il formato del file.');
-                }
-            });
-        }
-
-        function importExcel(file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-
-                    if (jsonData.length === 0) {
-                        alert('❌ Il file Excel è vuoto o non ha il formato corretto');
-                        return;
-                    }
-
-                    processImportedData(jsonData, 'Excel');
-
-                } catch (error) {
-                    console.error('Errore durante l\'import Excel:', error);
-                    alert('❌ Errore durante l\'import del file Excel. Controlla il formato del file.');
-                }
-            };
-            reader.readAsArrayBuffer(file);
-        }
-
-        function processImportedData(data, fileType) {
-            let importedCount = 0;
-            let skippedCount = 0;
-
-            data.forEach((row, index) => {
-                // Intestazioni accettate in EN e IT, prese da diversi template
-                const company = row['Company'] || row['Azienda'] || row['company'] || row['azienda'] || row['A'] || Object.values(row)[0];
-                const role = row['Role'] || row['Ruolo'] || row['role'] || row['ruolo'] || row['Position'] || row['position'] || row['B'] || Object.values(row)[1];
-                const jobSpec = row['Job spec'] || row['Job description'] || row['Posizione'] || row['job spec'] || row['job description'] || Object.values(row)[2] || '';
-                const dateApplied = row['Application'] || row['Data Candidatura'] || row['data candidatura'] || row['Date'] || row['date'] || row['D'] || Object.values(row)[3];
-                const status = row['Application Status'] || row['Status'] || row['Stato'] || row['status'] || row['C'] || Object.values(row)[4];
-                const comments = row['comments'] || row['note'] || row['Note'] || row['Commenti'] || Object.values(row)[5] || '';
-
-                if (company && role && status && dateApplied) {
-                    // Normalizza status e data
-                    const normalizedStatus = normalizeStatus(status);
-                    const normalizedDate = normalizeDate(dateApplied);
-
-                    if (normalizedStatus && normalizedDate) {
-                        const newApplication = {
-                            id: nextId++,
-                            company: company.toString().trim(),
-                            role: role.toString().trim(),
-                            jobSpec: (jobSpec || '').toString().trim(),
-                            status: normalizedStatus,
-                            dateApplied: normalizedDate,
-                            comments: (comments || '').toString().trim()
-                        };
-
-                        applications.push(newApplication);
-                        importedCount++;
-                    } else {
-                        console.warn(`Riga ${index + 1}: Status o data non validi`, { status, dateApplied });
-                        skippedCount++;
-                    }
-                } else {
-                    console.warn(`Riga ${index + 1}: Dati mancanti`, { company, role, status, dateApplied });
-                    skippedCount++;
-                }
-            });
-
-            if (importedCount > 0) {
-                renderApplications();
-                updateStats();
-                alert(`✅ Import ${fileType} completato!\n${importedCount} candidature importate${skippedCount > 0 ? `\n${skippedCount} righe saltate (formato non valido)` : ''}`);
-            } else {
-                alert(`❌ Nessuna candidatura valida trovata nel file ${fileType}`);
-            }
-        }
-
-        function normalizeStatus(status) {
-            const statusString = status.toString().toLowerCase().trim();
-            const statusMap = {
-                'applied': 'applied',
-                'applicato': 'applied',
-                'candidato': 'applied',
-                'pending': 'applied',
-                'open': 'applied',
-                'submitted': 'applied',
-                'hr': 'hr',
-                'hr interview': 'hr',
-                'colloquio hr': 'hr',
-                'in progress': 'hr',
-                'interview': 'hr',
-                'colloquio': 'hr',
-                '2round': '2round',
-                '2° round': '2round',
-                'secondo round': '2round',
-                '2 round': '2round',
-                '3round': '3round',
-                '3° round': '3round',
-                'terzo round': '3round',
-                '3 round': '3round',
-                '4round': '4round',
-                '4° round': '4round',
-                'quarto round': '4round',
-                '4 round': '4round',
-                '5round': '5round',
-                '5° round': '5round',
-                'quinto round': '5round',
-                '5 round': '5round',
-                'final': '5round',
-                'offered': '5round'
-            };
-            return statusMap[statusString] || null;
-        }
-
-        function normalizeDate(dateInput) {
-            if (!dateInput) return null;
-
-            try {
-                let date;
-                if (typeof dateInput === 'number') {
-                    date = new Date((dateInput - 25569) * 86400 * 1000);
-                } else {
-                    const dateString = dateInput.toString().trim();
-
-                    if (dateString.match(/^(\d{4})-(\d{2})-(\d{2})$/)) {
-                        // Formato ISO YYYY-MM-DD
-                        date = new Date(dateString);
-                    } else if (dateString.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)) {
-                        // DD/MM/YYYY
-                        const [dd, mm, yyyy] = dateString.split("/");
-                        date = new Date(`${yyyy}-${mm}-${dd}`);
-                    } else {
-                        date = new Date(dateString);
-                    }
-                }
-                if (date && !isNaN(date.getTime())) {
-                    return date.toISOString().split('T')[0];
-                }
-            } catch (error) {
-                console.error('Errore nella normalizzazione della data:', error);
-            }
-            return null;
-        }
-
-        function exportToCSV() {
-            if (applications.length === 0) {
-                alert('Nessuna candidatura da esportare');
-                return;
-            }
-
-            const csvData = applications.map(app => ({
-                'Azienda': app.company,
-                'Ruolo': app.role,
-                'Job spec': app.jobSpec,
-                'Stato': statusLabels[app.status],
-                'Data Candidatura': app.dateApplied,
-                'Commenti': app.comments
-            }));
-
-            const csv = Papa.unparse(csvData, {
-                delimiter: ',',
-                header: true
-            });
-
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-
-            link.setAttribute('href', url);
-            link.setAttribute('download', `job_applications_${new Date().toISOString().split('T')[0]}.csv`);
-            link.style.visibility = 'hidden';
-
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
-        function exportToExcel() {
-            if (applications.length === 0) {
-                alert('Nessuna candidatura da esportare');
-                return;
-            }
-
-            const exportData = applications.map(app => ({
-                'Azienda': app.company,
-                'Ruolo': app.role,
-                'Job spec': app.jobSpec,
-                'Stato': statusLabels[app.status],
-                'Data Candidatura': formatDate(app.dateApplied),
-                'Commenti': app.comments
-            }));
-
-            const ws = XLSX.utils.json_to_sheet(exportData);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Job Applications");
-
-            const fileName = `job_applications_${new Date().toISOString().split('T')[0]}.xlsx`;
-            XLSX.writeFile(wb, fileName);
-        }
-
-        function clearAllData() {
-            if (confirm('⚠️ Sei sicuro di voler cancellare tutte le candidature? Questa azione non può essere annullata.')) {
-                applications = [];
-                renderApplications();
-                updateStats();
-                alert('✅ Tutti i dati sono stati cancellati');
-            }
-        }
-
-        function formatDate(dateString) {
-            // dateString in ISO o simile
-            const date = new Date(dateString);
-            if (isNaN(date.getTime())) return dateString;
-            return date.toLocaleDateString('it-IT', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric'
-            });
-        }
-
-        function updateStats() {
-            const totalApplications = applications.length;
-            const appliedCount = applications.filter(app => app.status === 'applied').length;
-            const interviewCount = applications.filter(app => ['hr', '2round'].includes(app.status)).length;
-            const advancedCount = applications.filter(app => ['3round', '4round', '5round'].includes(app.status)).length;
-
-            document.getElementById('totalApplications').textContent = totalApplications;
-            document.getElementById('appliedCount').textContent = appliedCount;
-            document.getElementById('interviewCount').textContent = interviewCount;
-            document.getElementById('advancedCount').textContent = advancedCount;
-        }
-
-        // Imposta la data di oggi come default
-        document.getElementById('dateInput').value = new Date().toISOString().split('T')[0];
-
-        // Inizializza la pagina
+function updateApplicationStatus(id, newStatus) {
+    const application = applications.find(app => app.id === id);
+    if (application) {
+        application.status = newStatus;
         renderApplications();
         updateStats();
-    </script>
+    }
+}
+function deleteApplication(id) {
+    if (confirm('Sei sicuro di voler eliminare questa candidatura?')) {
+        applications = applications.filter(app => app.id !== id);
+        renderApplications();
+        updateStats();
+    }
+}
+function filterApplications() {
+    const companyFilter = document.getElementById('filterCompany').value.toLowerCase();
+    const roleFilter = document.getElementById('filterRole').value.toLowerCase();
+    const statusFilter = document.getElementById('filterStatus').value;
+    const filtered = applications.filter(app => {
+        const matchesCompany = !companyFilter || app.company.toLowerCase().includes(companyFilter);
+        const matchesRole = !roleFilter || app.role.toLowerCase().includes(roleFilter);
+        const matchesStatus = !statusFilter || app.status === statusFilter;
+        return matchesCompany && matchesRole && matchesStatus;
+    });
+    renderApplications(filtered);
+}
+function renderApplications(appsToRender = applications) {
+    const container = document.getElementById('applicationsList');
+    container.innerHTML = '';
+    if (appsToRender.length === 0) {
+        container.innerHTML = '<div class="no-applications">Nessuna candidatura trovata</div>';
+        return;
+    }
+    // Raggruppa per fase
+    const groupedByStatus = {};
+    statusOrder.forEach(status => groupedByStatus[status] = appsToRender.filter(app => app.status === status));
+    statusOrder.forEach(status => {
+        const apps = groupedByStatus[status];
+        if (apps.length > 0) {
+            const section = document.createElement('div');
+            section.className = 'phase-section';
+            section.innerHTML = `
+                <div class="phase-header phase-${status}">
+                    <span>${statusLabels[status]}</span>
+                    <span class="phase-count">${apps.length}</span>
+                </div>
+                <table class="applications-table">
+                <thead>
+                <tr>
+                  <th>Azienda</th>
+                  <th>Ruolo</th>
+                  <th>Job spec</th>
+                  <th>Data Candidatura</th>
+                  <th>Stato</th>
+                  <th>Commenti</th>
+                  <th>Azioni</th>
+                </tr>
+                </thead>
+                <tbody>
+                ${apps.map(app => `
+                    <tr>
+                        <td class="company-name">${app.company}</td>
+                        <td class="role-title">${app.role}</td>
+                        <td>${app.jobSpec||''}</td>
+                        <td class="date-applied">${formatDate(app.dateApplied)}</td>
+                        <td>
+                          <select class="status-select" onchange="updateApplicationStatus(${app.id}, this.value)">
+                            ${statusOrder.map(s => `<option value="${s}" ${s===app.status?'selected':''}>${statusLabels[s]}</option>`).join('')}
+                          </select>
+                        </td>
+                        <td>${app.comments||''}</td>
+                        <td><button class="btn" onclick="deleteApplication(${app.id})" style="background:#e74c3c; font-size:13px;">🗑️</button></td>
+                    </tr>
+                `).join('')}
+                </tbody>
+                </table>
+            `;
+            container.appendChild(section);
+        }
+    });
+}
+
+// ----------- IMPORT/ANTEPRIMA/CONFERMA ---------
+let importPreviewData = [];
+
+function previewImportFile(input) {
+    const file = input.files[0];
+    if (!file) return;
+    document.getElementById("importPreview").innerHTML = "Caricamento anteprima...";
+    document.getElementById("confirmImportBtn").style.display = "none";
+    importPreviewData = [];
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (ext === 'csv') {
+        Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: function(results) {
+                handlePreview(results.data);
+            }
+        });
+    } else if (ext === 'xlsx' || ext === 'xls') {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet, {defval:""});
+            handlePreview(jsonData);
+        };
+        reader.readAsArrayBuffer(file);
+    } else {
+        alert("File non supportato.");
+        return;
+    }
+}
+function handlePreview(rows) {
+    if (!rows || rows.length === 0) {
+        document.getElementById("importPreview").innerHTML = "❌ Nessun dato valido trovato.";
+        document.getElementById("confirmImportBtn").style.display = "none";
+        return;
+    }
+    importPreviewData = rows;
+    // Anteprima solo delle prime 5 righe
+    let html = `<h4>Anteprima Import (prime 5 righe):</h4>
+    <table class="applications-table"><thead>
+     <tr><th>Company</th><th>Role</th><th>Job spec</th><th>Application</th><th>data</th><th>company description</th><th>Application Status</th><th>comments</th></tr>
+    </thead><tbody>`;
+    for (let i=0; i<Math.min(rows.length,5); i++) {
+        let r = rows[i];
+        html += `<tr>
+            <td>${r['Company']||""}</td>
+            <td>${r['Role']||""}</td>
+            <td>${r['Job spec']||""}</td>
+            <td>${r['Application']||""}</td>
+            <td>${r['data']||""}</td>
+            <td>${r['company description']||""}</td>
+            <td>${r['Application Status']||""}</td>
+            <td>${r['comments']||""}</td>
+        </tr>`;
+    }
+    html += "</tbody></table>";
+    html += `<p>${rows.length} righe totali.</p>`;
+    document.getElementById("importPreview").innerHTML = html;
+    document.getElementById("confirmImportBtn").style.display = "inline-block";
+}
+
+function confirmImportData() {
+    if (!importPreviewData || importPreviewData.length === 0) return;
+    let importedCount = 0, skippedCount = 0;
+    // Normalizza e importa nella struttura dati
+    importPreviewData.forEach((row,idx) => {
+        // Trim sulle chiavi per gestire header con o senza spazi
+        const get = (k) => {
+            for(const kk in row) {
+                if(kk.replace(/\s+/g,'').toLowerCase() === k.replace(/\s+/g,'').toLowerCase())
+                    return row[kk];
+            }
+            return "";
+        };
+        const company = get('Company');
+        const role = get('Role');
+        const jobSpec = get('Job spec');
+        const dateApplied = get('Application') || get('data');
+        const applicationStatus = get('Application Status');
+        const comments = get('comments');
+        if (company && role && applicationStatus && dateApplied) {
+            const normalizedStatus = normalizeStatus(applicationStatus);
+            const normalizedDate = normalizeDate(dateApplied);
+            if (normalizedStatus && normalizedDate) {
+                applications.push({
+                    id: nextId++,
+                    company: company.toString().trim(),
+                    role: role.toString().trim(),
+                    jobSpec: (jobSpec||"").toString().trim(),
+                    status: normalizedStatus,
+                    dateApplied: normalizedDate,
+                    comments: (comments||"").toString().trim()
+                });
+                importedCount++;
+            } else {
+                skippedCount++;
+            }
+        } else {
+            skippedCount++;
+        }
+    });
+    renderApplications();
+    updateStats();
+    document.getElementById("importPreview").innerHTML = `✅ Import completato! ${importedCount} candidature importate${skippedCount>0?`<br>${skippedCount} righe saltate.`:""}`;
+    document.getElementById("confirmImportBtn").style.display = "none";
+    document.getElementById("csvFile").value = "";
+    importPreviewData = [];
+}
+// ----------- ALTRE UTILITY & EXPORT ---------
+function normalizeStatus(status) {
+    // Espandi qui se vuoi altri label
+    const s = status ? status.toString().toLowerCase().trim() : "";
+    const m = {
+        'applied': 'applied', 'submitted':'applied','pending':'applied',
+        'hr': 'hr', 'hr interview':'hr', 'in progress':'hr', 'colloquio':'hr','colloquio hr':'hr','interview':'hr',
+        '2round': '2round','2° round':'2round','secondo round':'2round','2 round':'2round',
+        '3round':'3round','3° round':'3round','terzo round':'3round','3 round':'3round',
+        '4round':'4round','4° round':'4round','quarto round':'4round','4 round':'4round',
+        '5round':'5round','5° round':'5round','quinto round':'5round','5 round':'5round','final':'5round','offered':'5round'
+    };
+    return m[s]||null;
+}
+function normalizeDate(d) {
+    if (!d) return null;
+    try {
+        if (typeof d === "number") {
+            return new Date((d - 25569) * 86400 * 1000).toISOString().split('T')[0];
+        }
+        let ds = d.toString().trim();
+        if (ds.match(/^(\d{4})-(\d{2})-(\d{2})$/)) return ds;
+        if (ds.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)) {
+            let [dd, mm, yyyy]=ds.split("/"); return `${yyyy}-${mm.padStart(2,"0")}-${dd.padStart(2,"0")}`;
+        }
+        let auto = new Date(ds);
+        if (!isNaN(auto.getTime())) return auto.toISOString().split('T')[0];
+    } catch (e) {}
+    return null;
+}
+function exportToCSV() {
+    if (applications.length === 0) {alert('Nessuna candidatura da esportare');return;}
+    const csvData = applications.map(app => ({
+        'Azienda': app.company,
+        'Ruolo': app.role,
+        'Job spec': app.jobSpec,
+        'Stato': statusLabels[app.status],
+        'Data Candidatura': app.dateApplied,
+        'Commenti': app.comments
+    }));
+    const csv = Papa.unparse(csvData, {delimiter:',',header:true});
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `job_applications_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link); link.click(); document.body.removeChild(link);
+}
+function exportToExcel() {
+    if (applications.length === 0) {alert('Nessuna candidatura da esportare');return;}
+    const exportData = applications.map(app => ({
+        'Azienda': app.company,
+        'Ruolo': app.role,
+        'Job spec': app.jobSpec,
+        'Stato': statusLabels[app.status],
+        'Data Candidatura': formatDate(app.dateApplied),
+        'Commenti': app.comments
+    }));
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Job Applications");
+    const fileName = `job_applications_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+}
+function clearAllData() {
+    if (confirm('⚠️ Sei sicuro di voler cancellare tutte le candidature?')) {
+        applications = [];
+        renderApplications();
+        updateStats();
+        alert('✅ Tutti i dati sono stati cancellati');
+    }
+}
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString;
+    return date.toLocaleDateString('it-IT', {year:'numeric',month:'short',day: 'numeric'});
+}
+function updateStats() {
+    document.getElementById('totalApplications').textContent = applications.length;
+    document.getElementById('appliedCount').textContent = applications.filter(app => app.status === 'applied').length;
+    document.getElementById('interviewCount').textContent = applications.filter(app => ['hr', '2round'].includes(app.status)).length;
+    document.getElementById('advancedCount').textContent = applications.filter(app => ['3round','4round','5round'].includes(app.status)).length;
+}
+// Data default = oggi
+document.getElementById('dateInput').value = new Date().toISOString().split('T')[0];
+// Start
+renderApplications(); updateStats();
+</script>
 </body>
 </html>
