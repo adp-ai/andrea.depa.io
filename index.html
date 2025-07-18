@@ -147,6 +147,7 @@
         .phase-3round { background: linear-gradient(135deg, #e74c3c, #c0392b); }
         .phase-4round { background: linear-gradient(135deg, #1abc9c, #16a085); }
         .phase-5round { background: linear-gradient(135deg, #27ae60, #2ecc71); }
+        .phase-rejected { background: linear-gradient(135deg, #7f8c8d, #95a5a6); }
         .phase-count {
             background: rgba(255, 255, 255, 0.2);
             padding: 4px 12px;
@@ -234,6 +235,17 @@
         .import-info li {
             margin-bottom: 4px;
         }
+        .debug-info {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #856404;
+            max-height: 200px;
+            overflow-y: auto;
+        }
         @media (max-width: 768px) {
             .controls-row {
                 flex-direction: column;
@@ -290,6 +302,7 @@
                     <option value="3round">3° Round</option>
                     <option value="4round">4° Round</option>
                     <option value="5round">5° Round</option>
+                    <option value="rejected">Rejected</option>
                 </select>
             </div>
             <div class="form-group">
@@ -307,6 +320,7 @@
                 <label for="csvFile">Importa da CSV/Excel:</label>
                 <input type="file" id="csvFile" accept=".csv,.xlsx,.xls" onchange="previewImportFile(this)" class="file-input">
                 <div id="importPreview"></div>
+                <div id="debugInfo" class="debug-info" style="display:none;"></div>
                 <button class="btn btn-success" id="confirmImportBtn" style="display:none; margin-top:8px;" onclick="confirmImportData()">✅ Conferma Import</button>
             </div>
             <button class="btn" onclick="exportToCSV()" style="background: linear-gradient(135deg, #f39c12, #e67e22);">📄 Esporta CSV</button>
@@ -330,6 +344,7 @@
                     <option value="3round">3° Round</option>
                     <option value="4round">4° Round</option>
                     <option value="5round">5° Round</option>
+                    <option value="rejected">Rejected</option>
                 </select>
             </div>
         </div>
@@ -340,16 +355,8 @@
                 <li><strong>CSV:</strong> Separato da virgole o punto e virgola</li>
                 <li><strong>Excel:</strong> File .xlsx o .xls</li>
             </ul>
-            <p><strong>Intestazioni minime raccomandate (non serve l'ordine):</strong></p>
-            <ul>
-                <li><strong>Company</strong></li>
-                <li><strong>Role</strong></li>
-                <li><strong>Job spec</strong></li>
-                <li><strong>Application</strong> <i>o</i> <strong>data</strong></li>
-                <li><strong>Application Status</strong></li>
-                <li><strong>comments</strong></li>
-            </ul>
-            <p><strong>Nota:</strong> Dopo la selezione visualizzi l’anteprima e poi confermi l’import.</p>
+            <p><strong>Il sistema riconoscerà automaticamente le colonne basandosi sui nomi più comuni</strong></p>
+            <p><strong>Nota:</strong> Dopo la selezione visualizzi l'anteprima e poi confermi l'import.</p>
         </div>
     </div>
 
@@ -369,6 +376,10 @@
         <div class="stat-card">
             <div class="stat-number" id="advancedCount">0</div>
             <div class="stat-label">Fasi Avanzate</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="rejectedCount">0</div>
+            <div class="stat-label">Rifiutate</div>
         </div>
     </div>
 
@@ -394,10 +405,11 @@ const statusLabels = {
     "2round": "2° Round",
     "3round": "3° Round",
     "4round": "4° Round",
-    "5round": "5° Round"
+    "5round": "5° Round",
+    rejected: "Rejected"
 };
 
-const statusOrder = ['applied', 'hr', '2round', '3round', '4round', '5round'];
+const statusOrder = ['applied', 'hr', '2round', '3round', '4round', '5round', 'rejected'];
 
 function addApplication() {
     const company = document.getElementById('companyInput').value.trim();
@@ -537,6 +549,7 @@ function previewImportFile(input) {
 
     document.getElementById("importPreview").innerHTML = "Caricamento anteprima...";
     document.getElementById("confirmImportBtn").style.display = "none";
+    document.getElementById("debugInfo").style.display = "none";
     importPreviewData = [];
 
     const ext = file.name.split('.').pop().toLowerCase();
@@ -555,7 +568,7 @@ function previewImportFile(input) {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, {type: 'array'});
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(firstSheet, {defval: ""});
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet, {defval: "", raw: false});
             handlePreview(jsonData);
         };
         reader.readAsArrayBuffer(file);
@@ -572,208 +585,161 @@ function handlePreview(rows) {
         return;
     }
 
+    // Debug: mostra le prime righe grezze
+    let debugInfo = "📋 Colonne trovate nel file:\n";
+    if (rows.length > 0) {
+        const firstRow = rows[0];
+        debugInfo += Object.keys(firstRow).map(key => `"${key}"`).join(', ') + '\n\n';
+        debugInfo += "📊 Prima riga di dati:\n";
+        debugInfo += JSON.stringify(firstRow, null, 2);
+    }
+    document.getElementById("debugInfo").innerHTML = `<pre>${debugInfo}</pre>`;
+    document.getElementById("debugInfo").style.display = "block";
+
     importPreviewData = rows;
 
-    let html = `<h4 style="margin-bottom: 8px;">Anteprima Import (prime 5 righe):</h4>
+    // Mappa automatica delle colonne
+    const mappedData = rows.map(row => mapRowToApplication(row));
+    
+    let html = `<h4 style="margin-bottom: 8px;">Anteprima Import (prime 5 righe mappate):</h4>
     <table class="applications-table"><thead>
-        <tr><th>Company</th><th>Role</th><th>Job spec</th><th>Application</th><th>data</th><th>company description</th><th>Application Status</th><th>comments</th></tr>
+        <tr><th>Azienda</th><th>Ruolo</th><th>Job spec</th><th>Data</th><th>Stato</th><th>Commenti</th></tr>
     </thead><tbody>`;
 
-    for (let i = 0; i < Math.min(rows.length, 5); i++) {
-        let r = rows[i];
+    for (let i = 0; i < Math.min(mappedData.length, 5); i++) {
+        const r = mappedData[i];
         html += `<tr>
-            <td>${r['Company'] || ""}</td>
-            <td>${r['Role'] || ""}</td>
-            <td>${r['Job spec'] || ""}</td>
-            <td>${r['Application'] || ""}</td>
-            <td>${r['data'] || ""}</td>
-            <td>${r['company description'] || ""}</td>
-            <td>${r['Application Status'] || ""}</td>
-            <td>${r['comments'] || ""}</td>
+            <td>${r.company || ""}</td>
+            <td>${r.role || ""}</td>
+            <td>${r.jobSpec || ""}</td>
+            <td>${r.dateApplied || ""}</td>
+            <td>${r.status || ""}</td>
+            <td>${r.comments || ""}</td>
         </tr>`;
     }
     html += "</tbody></table>";
-    html += `<p style="font-size:.97em;color:#888">${rows.length} righe totali.</p>`;
+    html += `<p style="font-size:.97em;color:#888">${rows.length} righe totali trovate.</p>`;
 
     document.getElementById("importPreview").innerHTML = html;
     document.getElementById("confirmImportBtn").style.display = "inline-block";
 }
 
+function mapRowToApplication(row) {
+    // Funzione per trovare la colonna giusta (case-insensitive e pulita)
+    const findColumn = (row, possibleNames) => {
+        for (const name of possibleNames) {
+            for (const key in row) {
+                if (cleanString(key) === cleanString(name)) {
+                    return row[key];
+                }
+            }
+        }
+        return '';
+    };
+
+    const cleanString = (str) => {
+        return str.toLowerCase().replace(/[^a-z0-9]/g, '');
+    };
+
+    // Mapping delle colonne
+    const company = findColumn(row, ['Company', 'Azienda', 'Società', 'Ditta', 'Employer']);
+    const role = findColumn(row, ['Role', 'Ruolo', 'Position', 'Posizione', 'Job Title', 'Titolo']);
+    const jobSpec = findColumn(row, ['Job spec', 'Jobspec', 'Job Specification', 'Specifica', 'Link', 'URL']);
+    const comments = findColumn(row, ['Comments', 'Commenti', 'Note', 'Osservazioni', 'Descrizione', 'Company description']);
+    
+    // Per la data, cerchiamo in più campi
+    let dateApplied = findColumn(row, ['Application', 'Data', 'Date', 'Applied', 'Application Date', 'Data candidatura']);
+    
+    // Per lo status, cerchiamo in più campi
+    let status = findColumn(row, ['Application Status', 'Status', 'Stato', 'Phase', 'Fase']);
+
+    return {
+        company: company ? company.toString().trim() : '',
+        role: role ? role.toString().trim() : '',
+        jobSpec: jobSpec ? jobSpec.toString().trim() : '',
+        dateApplied: dateApplied ? dateApplied.toString().trim() : '',
+        status: status ? status.toString().trim() : '',
+        comments: comments ? comments.toString().trim() : ''
+    };
+}
+
 async function confirmImportData() {
     if (!importPreviewData || importPreviewData.length === 0) return;
+    
     let importedCount = 0, skippedCount = 0;
+    let debugLog = [];
 
     importPreviewData.forEach((row, idx) => {
-        const get = (k) => {
-            for (const kk in row) {
-                if (kk.replace(/\s+/g, '').toLowerCase() === k.replace(/\s+/g, '').toLowerCase())
-                    return row[kk];
-            }
-            return "";
-        };
+        const mappedRow = mapRowToApplication(row);
+        
+        const company = mappedRow.company;
+        const role = mappedRow.role;
+        const jobSpec = mappedRow.jobSpec;
+        const dateApplied = mappedRow.dateApplied;
+        const statusRaw = mappedRow.status;
+        const comments = mappedRow.comments;
 
-        // Prima data valida fra 'Application' e 'data'
-        let dateApplied = '';
-        if (get('Application') && get('Application').toString().trim()) dateApplied = get('Application').toString().trim();
-        else if (get('data') && get('data').toString().trim()) dateApplied = get('data').toString().trim();
+        debugLog.push(`Riga ${idx + 1}: company="${company}", role="${role}", status="${statusRaw}", date="${dateApplied}"`);
 
-        const company = (get('Company') || "").toString().trim();
-        const role = (get('Role') || "").toString().trim();
-        const jobSpec = (get('Job spec') || "").toString().trim();
-        const applicationStatusRaw = (get('Application Status') || "").toString().trim();
-        const comments = (get('comments') || "").toString().trim();
+        if (company && role) {
+            const normalizedStatus = normalizeStatus(statusRaw) || 'applied';
+            const normalizedDate = normalizeDate(dateApplied) || new Date().toISOString().split('T')[0];
 
-        console.log(`Row ${idx}: company="${company}", role="${role}", status="${applicationStatusRaw}", date="${dateApplied}"`);
-
-        if (company && role && applicationStatusRaw && dateApplied) {
-            const normalizedStatus = normalizeStatus(applicationStatusRaw);
-            const normalizedDate = normalizeDate(dateApplied);
-
-            if (normalizedStatus && normalizedDate) {
-                applications.push({
-                    id: nextId++,
-                    company,
-                    role,
-                    jobSpec,
-                    status: normalizedStatus,
-                    dateApplied: normalizedDate,
-                    comments,
-                });
-                importedCount++;
-            } else {
-                console.warn(`Riga ${idx}: Status o data non riconosciuti ("${applicationStatusRaw}" / "${dateApplied}")`);
-                skippedCount++;
-            }
+            applications.push({
+                id: nextId++,
+                company,
+                role,
+                jobSpec,
+                status: normalizedStatus,
+                dateApplied: normalizedDate,
+                comments,
+            });
+            importedCount++;
         } else {
-            console.warn(`Riga ${idx}: Dati mancanti`, {company, role, applicationStatusRaw, dateApplied});
+            debugLog.push(`  -> SALTATA: mancano dati essenziali`);
             skippedCount++;
         }
     });
 
+    console.log("Debug log import:", debugLog);
+
     renderApplications();
     updateStats();
-    document.getElementById("importPreview").innerHTML = `✅ Import completato! ${importedCount} candidature importate${skippedCount > 0 ? `<br>${skippedCount} righe saltate.` : ""}`;
+    
+    let resultMessage = `✅ Import completato! ${importedCount} candidature importate`;
+    if (skippedCount > 0) {
+        resultMessage += `<br>⚠️ ${skippedCount} righe saltate (dati mancanti)`;
+    }
+    
+    document.getElementById("importPreview").innerHTML = resultMessage;
     document.getElementById("confirmImportBtn").style.display = "none";
+    document.getElementById("debugInfo").style.display = "none";
     document.getElementById("csvFile").value = "";
     importPreviewData = [];
 }
 
 function normalizeStatus(status) {
     if (!status) return null;
-    const s = status.toString().toLowerCase().trim().replace(/\s+/g, '');
-    const m = {
+    
+    const s = status.toString().toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+    
+    const statusMap = {
         'applied': 'applied',
         'submitted': 'applied',
         'pending': 'applied',
         'open': 'applied',
+        'inattesa': 'applied',
+        'candidato': 'applied',
         'hr': 'hr',
         'hrinterview': 'hr',
         'inprogress': 'hr',
         'colloquio': 'hr',
         'colloquiohr': 'hr',
         'interview': 'hr',
+        'primo': 'hr',
+        '1round': 'hr',
         '2round': '2round',
-        '2°round': '2round',
+        '2round': '2round',
+        'secondo': '2round',
         'secondoround': '2round',
-        '3round': '3round',
-        '3°round': '3round',
-        'terzoround': '3round',
-        '4round': '4round',
-        '4°round': '4round',
-        'quartoround': '4round',
-        '5round': '5round',
-        '5°round': '5round',
-        'quintoround': '5round',
-        'final': '5round',
-        'offered': '5round',
-    };
-    if (!m[s]) console.warn('Status non riconosciuto:', status, `-> "${s}"`);
-    return m[s] || null;
-}
-
-function normalizeDate(d) {
-    if (!d) return null;
-    try {
-        if (typeof d === "number") {
-            return new Date((d - 25569)*86400*1000).toISOString().split("T")[0];
-        }
-        let ds = d.toString().trim();
-        if (ds.match(/^(\d{4})-(\d{2})-(\d{2})$/)) return ds;
-        if (ds.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)) {
-            let [dd, mm, yyyy] = ds.split("/");
-            return `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
-        }
-        let auto = new Date(ds);
-        if (!isNaN(auto.getTime())) return auto.toISOString().split("T")[0];
-    } catch (e) {}
-    return null;
-}
-
-function exportToCSV() {
-    if (applications.length === 0) { alert('Nessuna candidatura da esportare'); return; }
-    const csvData = applications.map(app => ({
-        'Azienda': app.company,
-        'Ruolo': app.role,
-        'Job spec': app.jobSpec,
-        'Stato': statusLabels[app.status],
-        'Data Candidatura': app.dateApplied,
-        'Commenti': app.comments
-    }));
-    const csv = Papa.unparse(csvData, {delimiter:',', header:true});
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `job_applications_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}
-
-function exportToExcel() {
-    if (applications.length === 0) { alert('Nessuna candidatura da esportare'); return; }
-    const exportData = applications.map(app => ({
-        'Azienda': app.company,
-        'Ruolo': app.role,
-        'Job spec': app.jobSpec,
-        'Stato': statusLabels[app.status],
-        'Data Candidatura': formatDate(app.dateApplied),
-        'Commenti': app.comments
-    }));
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Job Applications");
-    const fileName = `job_applications_${new Date().toISOString().split('T')[0]}.xlsx`;
-    XLSX.writeFile(wb, fileName);
-}
-
-function clearAllData() {
-    if (confirm('⚠️ Sei sicuro di voler cancellare tutte le candidature?')) {
-        applications = [];
-        renderApplications();
-        updateStats();
-        alert('✅ Tutti i dati sono stati cancellati');
-    }
-}
-
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return dateString;
-    return date.toLocaleDateString('it-IT', {year:'numeric',month:'short',day: 'numeric'});
-}
-
-function updateStats() {
-    document.getElementById('totalApplications').textContent = applications.length;
-    document.getElementById('appliedCount').textContent = applications.filter(app => app.status === 'applied').length;
-    document.getElementById('interviewCount').textContent = applications.filter(app => ['hr', '2round'].includes(app.status)).length;
-    document.getElementById('advancedCount').textContent = applications.filter(app => ['3round','4round','5round'].includes(app.status)).length;
-}
-
-document.getElementById('dateInput').value = new Date().toISOString().split('T')[0];
-
-renderApplications();
-updateStats();
-
-</script>
-</body>
-</html>
+        '3roun
